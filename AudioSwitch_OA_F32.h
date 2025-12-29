@@ -19,50 +19,42 @@
 
 #include <AudioStream_F32.h>
 
-class AudioSwitch4_OA_F32 : public AudioStream_F32 {
+template <int outputs>
+class AudioSwitch_OA_F32 : public AudioStream_F32 {
+public:
+  AudioSwitch_OA_F32() : AudioStream_F32(1, inputQueueArray) { setDefaultValues(); }
+	AudioSwitch_OA_F32(const AudioSettings_F32 &settings) : AudioStream_F32(1, inputQueueArray) { setDefaultValues(); }
+	
+	void setDefaultValues(void) {
+		outputChannel = 0;
+	}
+
+  virtual void update(void) {
+    audio_block_f32_t *out=NULL;
+
+    out = receiveReadOnly_f32(0);
+    if (!out) return;
+
+    AudioStream_F32::transmit(out,outputChannel); //just output to the one channel
+    AudioStream_F32::release(out);
+  }
+
+  int setChannel(unsigned int channel) {
+    if (channel >= outputs || channel < 0) return outputChannel;  //invalid!  stick with previous channel
+    return outputChannel = channel;
+  }
+
+private:
+  audio_block_f32_t *inputQueueArray[1];
+  int outputChannel;
+};
+
+using AudioSwitch4_OA_F32 = AudioSwitch_OA_F32<4>;
 //GUI: inputs:1, outputs:4  //this line used for automatic generation of GUI node
 //GUI: shortName:Switch4
-public:
-    AudioSwitch4_OA_F32() : AudioStream_F32(1, inputQueueArray) { setDefaultValues(); }
-	AudioSwitch4_OA_F32(const AudioSettings_F32 &settings) : AudioStream_F32(1, inputQueueArray) { setDefaultValues(); }
-	
-	void setDefaultValues(void) {
-		outputChannel = 0;
-	}
-	
-    virtual void update(void);
 
-    int setChannel(unsigned int channel) {
-      if (channel >= 4 || channel < 0) return outputChannel;  //invalid!  stick with previous channel
-      return outputChannel = channel;
-    }
-
-  private:
-    audio_block_f32_t *inputQueueArray[1];
-    int outputChannel;
-};
-
-class AudioSwitch8_OA_F32 : public AudioStream_F32 {
+using AudioSwitch8_OA_F32 = AudioSwitch_OA_F32<8>;
 //GUI: inputs:1, outputs:8  //this line used for automatic generation of GUI node
 //GUI: shortName:Switch8
-public:
-    AudioSwitch8_OA_F32() : AudioStream_F32(1, inputQueueArray) { setDefaultValues(); }
-	AudioSwitch8_OA_F32(const AudioSettings_F32 &settings) : AudioStream_F32(1, inputQueueArray) { setDefaultValues(); }
-	
-	void setDefaultValues(void) {
-		outputChannel = 0;
-	}
-	
-    virtual void update(void);
-
-    int setChannel(unsigned int channel) {
-      if (channel >= 8 || channel < 0) return outputChannel;  //invalid!  stick with previous channel
-      return outputChannel = channel;
-    }
-
-  private:
-    audio_block_f32_t *inputQueueArray[1];
-    int outputChannel;
-};
 
 #endif
