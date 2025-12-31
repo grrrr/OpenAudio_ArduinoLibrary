@@ -182,7 +182,7 @@ private:
         if (queue[head]==NULL) {
             queue[head] = allocate_f32();
             if (queue[head] == NULL) {
-                if (!Serial) Serial.println("AudioEffectDelay_OA_F32::receiveIncomingData: Null memory 2.  Returning.");
+//                if (!Serial) Serial.println("AudioEffectDelay_OA_F32::receiveIncomingData: Null memory 2.  Returning.");
                 return;
             }
         }
@@ -217,7 +217,7 @@ private:
             if (queue[head]==NULL) {
                 queue[head] = allocate_f32();
                 if (queue[head] == NULL) {
-                    Serial.println("AudioEffectDelay_OA_F32::receiveIncomingData: Null memory 3.  Returning.");
+//                    Serial.println("AudioEffectDelay_OA_F32::receiveIncomingData: Null memory 3.  Returning.");
                     AudioStream_F32::release(input);
                     return;
                 }
