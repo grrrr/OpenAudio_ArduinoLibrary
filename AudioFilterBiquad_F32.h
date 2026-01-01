@@ -50,16 +50,15 @@
 // See the function useDouble(bool d) below
 // #define NEVER_DOUBLE
 
-class AudioFilterBiquad_F32 : public AudioStream_F32
+template<int stages>
+class AudioFilterBiquad_n_F32 : public AudioStream_F32
 {
-  //GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
-  //GUI: shortName:IIR
   public:
-    AudioFilterBiquad_F32(void): AudioStream_F32(1,inputQueueArray) {
+    AudioFilterBiquad_n_F32(void): AudioStream_F32(1,inputQueueArray) {
         setSampleRate_Hz(AUDIO_SAMPLE_RATE_EXACT);
         doClassInit();
     }
-    AudioFilterBiquad_F32(const AudioSettings_F32 &settings):
+    AudioFilterBiquad_n_F32(const AudioSettings_F32 &settings):
         AudioStream_F32(1,inputQueueArray) {
             setSampleRate_Hz(settings.sample_rate_Hz);
             doClassInit();
@@ -269,6 +268,11 @@ class AudioFilterBiquad_F32 : public AudioStream_F32
     // ARM DSP Math library filter instance.
     arm_biquad_casd_df1_inst_f32 iir_inst;
 };
+
+using AudioFilterBiquad_F32 = AudioFilterBiquad_n_F32<IIR_MAX_STAGES>;
+//GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
+//GUI: shortName:IIR
+
 
 #endif
 
