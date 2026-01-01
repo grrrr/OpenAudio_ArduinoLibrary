@@ -240,7 +240,7 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
     }
 
     ftype* getCoeffs(void)  {
-        return coeff;    // Pointer to 20 coefficients in double.
+        return coeffs;    // Pointer to 20 coefficients in double.
         }
 
     void update(void) {
