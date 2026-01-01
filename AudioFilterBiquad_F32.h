@@ -50,7 +50,7 @@
 // See the function useDouble(bool d) below
 // #define NEVER_DOUBLE
 
-template<int stages>
+template<int stages=IIR_MAX_STAGES, typename ftype=float>
 class AudioFilterBiquad_n_F32 : public AudioStream_F32
 {
   public:
@@ -60,18 +60,16 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
     }
     AudioFilterBiquad_n_F32(const AudioSettings_F32 &settings):
         AudioStream_F32(1,inputQueueArray) {
-            setSampleRate_Hz(settings.sample_rate_Hz);
-            doClassInit();
+        setSampleRate_Hz(settings.sample_rate_Hz);
+        doClassInit();
     }
 
     void doClassInit(void)  {
-        for(int ii=0; ii<5*IIR_MAX_STAGES; ii++)  {
-           coeff32[ii] = 0.0;
-           coeff64[ii] = 0.0;
+        for(int ii=0; ii<5*stages; ii++)  {
+           coeffs[ii] = 0.0;
            }
-        for(int ii=0; ii<IIR_MAX_STAGES; ii++) {
-           coeff32[5*ii] = 1.0;  // b0 = 1 for pass through
-           coeff64[5*ii] = 1.0;
+        for(int ii=0; ii<stages; ii++) {
+           coeffs[5*ii] = 1.0;  // b0 = 1 for pass through
            }
         numStagesUsed = 0;  // Can be 0 to 4
         doBiquad = false;   // This is the way to jump over the biquad
@@ -81,7 +79,7 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
     // or from direct setCoefficients() need to be added to the double array
     // and also to the float
     void setCoefficients(int iStage, double *cf)  {
-        if (iStage >= IIR_MAX_STAGES) {
+        if (iStage > stages) {
            if (Serial) {
               Serial.print("AudioFilterBiquad_F32: setCoefficients:");
               Serial.println(" *** MaxStages Error");
@@ -90,10 +88,8 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
            }
        if((iStage + 1) > numStagesUsed)
            numStagesUsed = iStage + 1;  // There may be blank pass throughs
-       for(int ii=0; ii<5; ii++)  {
-           coeff64[ii + 5*iStage] = cf[ii];  // The local collection of double coefficients
-           coeff32[ii + 5*iStage] = (float)cf[ii];  // and of floats
-           }
+       for(int ii=0; ii<5; ii++)
+           coeffs[ii + 5*iStage] = ftype(cf[ii]);  // The local collection of double coefficients
        begin();
        }
 
@@ -104,7 +100,7 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
     void begin(void) {
         // Initialize BiQuad instance (ARM DSP Math Library)
         //https://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html
-        arm_biquad_cascade_df1_init_f32(&iir_inst, numStagesUsed, &coeff32[0],  &StateF32[0]);
+        arm_biquad_cascade_df1_init_f32(&iir_inst, numStagesUsed, &coeffs[0],  &state[0]);
         doBiquad = true;
         }
 
@@ -134,8 +130,8 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
 
     //Two update() options, floats or doubles
     void useDouble(bool ud)  {
-        useDoubleCoefs = ud;  // true is to use doubles
-        useDoubleCoefs = false;  //  Not implemented yet
+//        useDoubleCoefs = ud;  // true is to use doubles
+//        useDoubleCoefs = false;  //  Not implemented yet
         }
 
     // Compute common filter functions
@@ -243,21 +239,31 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
         setCoefficients(stage, coeff);
     }
 
-    double* getCoeffs(void)  {
-        return coeff64;    // Pointer to 20 coefficients in double.
+    ftype* getCoeffs(void)  {
+        return coeff;    // Pointer to 20 coefficients in double.
         }
 
-    void update(void);
+    void update(void) {
+      audio_block_f32_t *block;
+
+      block = AudioStream_F32::receiveWritable_f32();
+      if (!block) return;  // Out of memory
+      if(doBiquad)   // Filter is defined, so go to it
+          arm_biquad_cascade_df1_f32(&iir_inst, block->data,
+               block->data, block->length);
+      // Transmit the data, filtered or unfiltered
+      AudioStream_F32::transmit(block);
+      AudioStream_F32::release(block);
+    }
 
   private:
     audio_block_f32_t *inputQueueArray[1];
-    float  coeff32[5 * IIR_MAX_STAGES];  // Local copies to be transferred with begin()
-    double coeff64[5 * IIR_MAX_STAGES];
-    float  StateF32[4*IIR_MAX_STAGES];
-    //double StateF64[4*IIR_MAX_STAGES];  // Will need this for 64 bit version
-    float sampleRate_Hz = AUDIO_SAMPLE_RATE_EXACT; //default.  from AudioStream.h??
+    ftype coeffs[5*stages];  // Local copies to be transferred with begin()
+    ftype state[4*stages];
+    //double StateF64[4*stages];  // Will need this for 64 bit version
+    float sampleRate_Hz; //default.  from AudioStream.h??
     int numStagesUsed = 0;
-    bool useDoubleCoefs = false; // As of now, all float <<<<<<<<<<<<<<<<<<<<
+//    bool useDoubleCoefs = false; // As of now, all float <<<<<<<<<<<<<<<<<<<<
     bool doBiquad = false;
 
     /* Info - The structure from arm_biquad_casd_df1_inst_f32 consists of
