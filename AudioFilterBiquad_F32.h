@@ -66,10 +66,10 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
 
     void doClassInit(void)  {
         for(int ii=0; ii<5*stages; ii++)  {
-           coeff[ii] = 0.0;
+           coeffs[ii] = 0.0;
            }
-        for(int ii=0; ii<4; ii++) {
-           coeff[5*ii] = 1.0;  // b0 = 1 for pass through
+        for(int ii=0; ii<stages; ii++) {
+           coeffs[5*ii] = 1.0;  // b0 = 1 for pass through
            }
         numStagesUsed = 0;  // Can be 0 to 4
         doBiquad = false;   // This is the way to jump over the biquad
@@ -89,8 +89,8 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
        if((iStage + 1) > numStagesUsed)
            numStagesUsed = iStage + 1;  // There may be blank pass throughs
        for(int ii=0; ii<5; ii++)
-           coeff[ii + 5*iStage] = ftype(cf[ii]);  // The local collection of double coefficients
-       doBiquad = true;
+           coeffs[ii + 5*iStage] = ftype(cf[ii]);  // The local collection of double coefficients
+       begin();
        }
 
     // ARM DSP Math library filter instance.
@@ -100,7 +100,8 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
     void begin(void) {
         // Initialize BiQuad instance (ARM DSP Math Library)
         //https://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html
-        arm_biquad_cascade_df1_init_f32(&iir_inst, numStagesUsed, &coeff32[0],  &StateF32[0]);
+        arm_biquad_cascade_df1_init_f32(&iir_inst, numStagesUsed, &coeffs[0],  &state[0]);
+        doBiquad = true;
         }
 
     void end(void) {
@@ -257,7 +258,7 @@ class AudioFilterBiquad_n_F32 : public AudioStream_F32
 
   private:
     audio_block_f32_t *inputQueueArray[1];
-    ftype coeff[5*stages];  // Local copies to be transferred with begin()
+    ftype coeffs[5*stages];  // Local copies to be transferred with begin()
     ftype state[4*stages];
     //double StateF64[4*stages];  // Will need this for 64 bit version
     float sampleRate_Hz; //default.  from AudioStream.h??
